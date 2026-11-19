@@ -12,6 +12,9 @@ build/
 .svelte-kit/
 .vite/
 
+# Tauri generated
+src/tauri/gen/
+
 # Env
 .env
 .env.*

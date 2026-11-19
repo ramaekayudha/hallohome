@@ -1,6 +1,6 @@
 {
   "name": "hallohome",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -14,11 +14,13 @@
     "bump": "node scripts/bump.mjs",
     "restore": "node scripts/restore.mjs",
     "logo": "node scripts/logo.mjs",
+    "tauri": "tauri",
     "build:ui": "pnpm --filter @hallohome/ui build",
     "typecheck": "pnpm --filter @hallohome/ui typecheck",
     "lint": "pnpm --filter @hallohome/ui lint"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.6",
     "sharp": "^0.33.5"
   }
 }
