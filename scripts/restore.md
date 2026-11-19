@@ -1,8 +1,8 @@
 # HalloHome — Restore Snapshot
 
-Generated: 2026-11-19T17:31:16.869Z
+Generated: 2026-11-19T17:45:22.795Z
 
-Total files: 48
+Total files: 51
 
 ---
 
@@ -125,7 +125,7 @@ resolver = "2"
 members = ["src/core", "src/tauri"]
 
 [workspace.package]
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Rama Eka Yudha"]
@@ -1044,7 +1044,7 @@ Public License instead of this License.  But first, please read
 ```json
 {
   "name": "hallohome",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -1085,7 +1085,7 @@ allowBuilds:
 ```markdown
 # HalloHome
 
-![Version](https://img.shields.io/badge/version-0.0.2-blue)
+![Version](https://img.shields.io/badge/version-0.0.3-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Tech](https://img.shields.io/badge/tech-Rust%20%2B%20Tauri%20v2%20%2B%20Svelte%205-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
@@ -1567,8 +1567,27 @@ mod tests {
 ```rust
 //! Floor plan model: walls, rooms, layers, snapping.
 
+use crate::geometry::Point2;
+use serde::{Deserialize, Serialize};
+
 /// Canonical module name.
 pub const MODULE_NAME: &str = "floorplan";
+
+/// Basic grid configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Grid {
+    pub spacing: f32,
+    pub origin: Point2,
+}
+
+impl Default for Grid {
+    fn default() -> Self {
+        Self {
+            spacing: 20.0,
+            origin: Point2::new(0.0, 0.0),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -1578,6 +1597,13 @@ mod tests {
     fn module_name_ok() {
         assert_eq!(MODULE_NAME, "floorplan");
     }
+
+    #[test]
+    fn grid_default_ok() {
+        let g = Grid::default();
+        assert_eq!(g.spacing, 20.0);
+        assert_eq!(g.origin.x, 0.0);
+    }
 }
 ```
 
@@ -1586,8 +1612,10 @@ mod tests {
 ```rust
 //! Geometry primitives and transforms.
 
+use serde::{Deserialize, Serialize};
+
 /// A 2D point in scene units.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point2 {
     pub x: f32,
     pub y: f32,
@@ -1600,7 +1628,7 @@ impl Point2 {
 }
 
 /// A 3D point in scene units.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point3 {
     pub x: f32,
     pub y: f32,
@@ -1676,6 +1704,9 @@ mod tests {
 ```rust
 //! Project file: `.hallohome` schema, serialization, migration.
 
+use crate::floorplan::Grid;
+use serde::{Deserialize, Serialize};
+
 /// Canonical module name.
 pub const MODULE_NAME: &str = "project";
 
@@ -1684,6 +1715,22 @@ pub const FILE_EXTENSION: &str = "hallohome";
 
 /// Current schema version of the `.hallohome` file format.
 pub const SCHEMA_VERSION: u32 = 1;
+
+/// Workspace state sent to the UI.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceState {
+    pub project_name: String,
+    pub grid: Grid,
+}
+
+impl Default for WorkspaceState {
+    fn default() -> Self {
+        Self {
+            project_name: "Untitled Project".to_string(),
+            grid: Grid::default(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -1702,6 +1749,12 @@ mod tests {
     #[test]
     fn schema_version_positive() {
         const { assert!(SCHEMA_VERSION >= 1) };
+    }
+
+    #[test]
+    fn default_workspace_ok() {
+        let ws = WorkspaceState::default();
+        assert_eq!(ws.project_name, "Untitled Project");
     }
 }
 ```
@@ -6422,15 +6475,23 @@ path = "src/main.rs"
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use hallohome_core::project::WorkspaceState;
+
 /// Returns the core engine version to the UI.
 #[tauri::command]
 fn core_version() -> &'static str {
     hallohome_core::version()
 }
 
+/// Initializes and returns the default workspace state.
+#[tauri::command]
+fn get_workspace_state() -> WorkspaceState {
+    WorkspaceState::default()
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![core_version])
+        .invoke_handler(tauri::generate_handler![core_version, get_workspace_state])
         .run(tauri::generate_context!())
         .expect("error while running HalloHome");
 }
@@ -6442,7 +6503,7 @@ fn main() {
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "HalloHome",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "identifier": "com.hallohome.app",
   "build": {
     "frontendDist": "../../src/ui/dist",
@@ -6532,7 +6593,7 @@ export default tseslint.config(
 ```json
 {
   "name": "@hallohome/ui",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -6542,6 +6603,9 @@ export default tseslint.config(
     "preview": "vite preview",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --output human",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -6712,53 +6776,156 @@ declare module '*.svelte' {
 
 ```svelte
 <script lang="ts">
-  import Header from './components/Header.svelte';
-  import HeroLogo from './components/HeroLogo.svelte';
+  import { onMount } from 'svelte';
+  import { invoke, isTauri } from '@tauri-apps/api/core';
+  import Topbar from './components/Topbar.svelte';
+  import Sidebar from './components/Sidebar.svelte';
+  import Canvas from './components/Canvas.svelte';
   import Footer from './components/Footer.svelte';
 
   type Theme = 'light' | 'dark';
+
+  // Definisi tipe yang mencerminkan struct WorkspaceState dari Rust
+  interface GridState {
+    spacing: number;
+    origin: { x: number; y: number };
+  }
+
+  interface WorkspaceState {
+    project_name: string;
+    grid: GridState;
+  }
 
   function initialTheme(): Theme {
     try {
       const s = localStorage.getItem('hallohome.theme');
       if (s === 'dark' || s === 'light') return s;
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     return 'light';
   }
 
   let theme = $state<Theme>(initialTheme());
+  let activeTool = $state('select');
+  let projectName = $state('Loading...');
+  let gridSpacing = $state(20);
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
       localStorage.setItem('hallohome.theme', theme);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   });
 
   function toggleTheme() {
     theme = theme === 'light' ? 'dark' : 'light';
   }
+
+  onMount(async () => {
+    try {
+      if (isTauri()) {
+        // Gunakan Generics untuk menghilangkan 'any'
+        const state = await invoke<WorkspaceState>('get_workspace_state');
+        projectName = state.project_name;
+        gridSpacing = state.grid.spacing;
+      } else {
+        projectName = 'Browser Preview';
+      }
+    } catch (e) {
+      console.error(e);
+      projectName = 'Error loading';
+    }
+  });
 </script>
 
-<Header {theme} onToggleTheme={toggleTheme} />
+<div class="app-container">
+  <Topbar 
+    {projectName} 
+    {theme} 
+    onToggleTheme={toggleTheme} 
+    {activeTool} 
+    onSelectTool={(t) => activeTool = t} 
+  />
+  
+  <div class="app-body">
+    <Sidebar {activeTool} {gridSpacing} />
+    <Canvas {activeTool} {gridSpacing} />
+  </div>
 
-<main class="main">
-  <HeroLogo />
-</main>
-
-<Footer />
+  <Footer />
+</div>
 
 <style>
-  .main {
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .app-body {
+    display: flex;
     flex: 1;
+    overflow: hidden;
+  }
+</style>
+```
+
+## `src/ui/src/components/Canvas.svelte`
+
+```svelte
+<script lang="ts">
+  let { activeTool, gridSpacing }: { activeTool: string; gridSpacing: number } = $props();
+</script>
+
+<main class="canvas-container">
+  <div 
+    class="grid-layer" 
+    style="--grid-size: {gridSpacing}px;"
+  ></div>
+  
+  <div class="canvas-content">
+    <p class="hint">Workspace Ready. Tool: <strong>{activeTool}</strong></p>
+  </div>
+</main>
+
+<style>
+  .canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+  }
+
+  .grid-layer {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    background-position: center center;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .canvas-content {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-elevated);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .hint {
+    margin: 0;
+    color: var(--text-muted);
   }
 </style>
 ```
@@ -6779,15 +6946,20 @@ declare module '*.svelte' {
 
 <style>
   .footer {
-    border-top: 1px solid var(--border);
     background: var(--bg-elevated);
-    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    padding: 0.5rem 1rem;
     text-align: center;
+    flex-shrink: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .footer-line {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -7020,6 +7192,63 @@ declare module '*.svelte' {
 </style>
 ```
 
+## `src/ui/src/components/Sidebar.svelte`
+
+```svelte
+<script lang="ts">
+  let { activeTool, gridSpacing }: { activeTool: string; gridSpacing: number } = $props();
+</script>
+
+<aside class="sidebar">
+  <div class="panel">
+    <h3 class="panel-title">Properties</h3>
+    <div class="property">
+      <span class="label">Active Tool</span>
+      <span class="value capitalize">{activeTool}</span>
+    </div>
+    <div class="property">
+      <span class="label">Grid Size</span>
+      <span class="value">{gridSpacing}px</span>
+    </div>
+  </div>
+</aside>
+
+<style>
+  .sidebar {
+    width: 260px;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .panel-title {
+    margin: 0 0 1rem 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .property {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+
+  .label { color: var(--text-muted); }
+  .value { font-weight: 500; }
+  .capitalize { text-transform: capitalize; }
+</style>
+```
+
 ## `src/ui/src/components/ThemeToggle.svelte`
 
 ```svelte
@@ -7039,59 +7268,207 @@ declare module '*.svelte' {
   onclick={onToggle}
 >
   {#if theme === 'light'}
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   {:else}
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="4" />
-      <path
-        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-      />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   {/if}
 </button>
 
 <style>
   .theme-toggle {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--bg-elevated);
     display: grid;
     place-items: center;
     color: var(--text);
-    transition:
-      background var(--transition),
-      border-color var(--transition),
-      color var(--transition);
+    transition: all var(--transition);
   }
 
   .theme-toggle:hover {
     border-color: var(--accent);
     color: var(--accent);
   }
+</style>
+```
+
+## `src/ui/src/components/Topbar.svelte`
+
+```svelte
+<script lang="ts">
+  import ThemeToggle from './ThemeToggle.svelte';
+
+  let {
+    projectName,
+    theme,
+    onToggleTheme,
+    activeTool,
+    onSelectTool,
+  }: {
+    projectName: string;
+    theme: 'light' | 'dark';
+    onToggleTheme: () => void;
+    activeTool: string;
+    onSelectTool: (tool: string) => void;
+  } = $props();
+
+  let open = $state(false);
+  const menuItems = ['File', 'Edit', 'View', 'Help'];
+  const tools = [
+    { id: 'select', label: 'Select' },
+    { id: 'wall', label: 'Wall' },
+    { id: 'door', label: 'Door' },
+    { id: 'window', label: 'Window' },
+  ];
+
+  function toggle() {
+    open = !open;
+  }
+</script>
+
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" aria-label="Menu" aria-expanded={open} onclick={toggle}>
+      <span></span><span></span><span></span>
+    </button>
+    <div class="brand">
+      <span class="brand-mark">H</span>
+      <span class="brand-name">HalloHome</span>
+      <span class="divider">/</span>
+      <span class="project-name">{projectName}</span>
+    </div>
+  </div>
+
+  <div class="center">
+    {#each tools as tool}
+      <button 
+        class="tool-btn" 
+        class:active={activeTool === tool.id}
+        onclick={() => onSelectTool(tool.id)}
+      >
+        {tool.label}
+      </button>
+    {/each}
+  </div>
+
+  <div class="right">
+    <ThemeToggle {theme} onToggle={onToggleTheme} />
+  </div>
+
+  {#if open}
+    <nav class="dropdown" aria-label="Main menu">
+      {#each menuItems as item}
+        <button class="dropdown-item" onclick={() => open = false}>
+          {item}
+        </button>
+      {/each}
+    </nav>
+  {/if}
+</header>
+
+<style>
+  .topbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .left, .right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+  }
+
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .divider { color: var(--text-muted); }
+  .project-name { color: var(--text-muted); font-weight: 500; }
+
+  .center {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--bg);
+    padding: 0.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .tool-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all var(--transition);
+  }
+
+  .tool-btn:hover { background: var(--accent-soft); }
+  .tool-btn.active { background: var(--accent); color: #fff; }
+
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 32px;
+    padding: 4px 0;
+  }
+  .hamburger span {
+    display: block;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+  }
+
+  .dropdown {
+    position: absolute;
+    top: 60px;
+    left: 1rem;
+    min-width: 200px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .dropdown-item {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    color: var(--text);
+  }
+  .dropdown-item:hover { background: var(--accent-soft); color: var(--accent); }
 </style>
 ```
 
@@ -7151,7 +7528,7 @@ export default app;
 ```css
 :root {
   --font-family: 'Lora', serif;
-  --transition: 200ms ease;
+  --transition: 150ms ease;
 }
 
 :root[data-theme='light'] {
@@ -7162,7 +7539,7 @@ export default app;
   --accent: #1e40af;
   --accent-soft: #dbe4ff;
   --border: #d7def0;
-  --shadow: 0 8px 24px rgba(10, 31, 68, 0.08);
+  --shadow: 0 4px 12px rgba(10, 31, 68, 0.05);
 }
 
 :root[data-theme='dark'] {
@@ -7173,7 +7550,7 @@ export default app;
   --accent: #ff7a00;
   --accent-soft: #2a1a08;
   --border: #23314d;
-  --shadow: 0 8px 24px rgba(255, 122, 0, 0.15);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -7184,22 +7561,23 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 body {
   font-family: var(--font-family);
   background: var(--bg);
   color: var(--text);
+  overflow: hidden; /* Cegah body scroll, gunakan internal div */
   transition:
     background var(--transition),
     color var(--transition);
-  min-height: 100vh;
 }
 
 #app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 button {
@@ -7208,6 +7586,7 @@ button {
   border: none;
   background: none;
   color: inherit;
+  outline: none;
 }
 ```
 

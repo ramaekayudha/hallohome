@@ -11,15 +11,20 @@
 
 <style>
   .footer {
-    border-top: 1px solid var(--border);
     background: var(--bg-elevated);
-    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    padding: 0.5rem 1rem;
     text-align: center;
+    flex-shrink: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .footer-line {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;

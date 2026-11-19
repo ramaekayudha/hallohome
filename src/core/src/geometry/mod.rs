@@ -1,7 +1,9 @@
 //! Geometry primitives and transforms.
 
+use serde::{Deserialize, Serialize};
+
 /// A 2D point in scene units.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point2 {
     pub x: f32,
     pub y: f32,
@@ -14,7 +16,7 @@ impl Point2 {
 }
 
 /// A 3D point in scene units.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point3 {
     pub x: f32,
     pub y: f32,

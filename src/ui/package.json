@@ -1,6 +1,6 @@
 {
   "name": "@hallohome/ui",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -10,6 +10,9 @@
     "preview": "vite preview",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --output human",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

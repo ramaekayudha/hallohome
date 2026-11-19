@@ -1,5 +1,8 @@
 //! Project file: `.hallohome` schema, serialization, migration.
 
+use crate::floorplan::Grid;
+use serde::{Deserialize, Serialize};
+
 /// Canonical module name.
 pub const MODULE_NAME: &str = "project";
 
@@ -8,6 +11,22 @@ pub const FILE_EXTENSION: &str = "hallohome";
 
 /// Current schema version of the `.hallohome` file format.
 pub const SCHEMA_VERSION: u32 = 1;
+
+/// Workspace state sent to the UI.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceState {
+    pub project_name: String,
+    pub grid: Grid,
+}
+
+impl Default for WorkspaceState {
+    fn default() -> Self {
+        Self {
+            project_name: "Untitled Project".to_string(),
+            grid: Grid::default(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -26,5 +45,11 @@ mod tests {
     #[test]
     fn schema_version_positive() {
         const { assert!(SCHEMA_VERSION >= 1) };
+    }
+
+    #[test]
+    fn default_workspace_ok() {
+        let ws = WorkspaceState::default();
+        assert_eq!(ws.project_name, "Untitled Project");
     }
 }
