@@ -7,18 +7,36 @@
     activeTool,
     gridSpacing,
     walls,
-    onAddWall
+    selectedWallId,
+    onAddWall,
+    onSelectWall
   }: {
     activeTool: string;
     gridSpacing: number;
     walls: Wall[];
+    selectedWallId: string | null;
     onAddWall: (start: Point2, end: Point2) => void;
+    onSelectWall: (id: string | null) => void;
   } = $props();
 
   let canvasContainer: HTMLElement;
   let isDrawing = $state(false);
   let currentStart = $state<Point2 | null>(null);
   let currentEnd = $state<Point2 | null>(null);
+
+  // Hitung jarak dari titik ke segmen garis (untuk seleksi)
+  function distanceToLine(p: Point2, line: Line): number {
+    const l2 = Math.pow(line.end.x - line.start.x, 2) + Math.pow(line.end.y - line.start.y, 2);
+    if (l2 === 0) return Math.hypot(p.x - line.start.x, p.y - line.start.y);
+    
+    let t = ((p.x - line.start.x) * (line.end.x - line.start.x) + (p.y - line.start.y) * (line.end.y - line.start.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    
+    const projX = line.start.x + t * (line.end.x - line.start.x);
+    const projY = line.start.y + t * (line.end.y - line.start.y);
+    
+    return Math.hypot(p.x - projX, p.y - projY);
+  }
 
   function snapToGrid(val: number) {
     return Math.round(val / gridSpacing) * gridSpacing;
@@ -35,17 +53,32 @@
     };
   }
 
-  // Menggunakan window event untuk mencegah peringatan A11y pada div
   function handleMouseDown(e: MouseEvent) {
-    if (activeTool !== 'wall') return;
-    
-    // Pastikan klik dimulai di dalam area canvas
     if (e.target instanceof Node && !canvasContainer.contains(e.target)) return;
 
-    const pos = getMousePos(e);
-    isDrawing = true;
-    currentStart = pos;
-    currentEnd = pos;
+    const rawPos = getMousePos(e);
+
+    if (activeTool === 'select') {
+      // Cari dinding terdekat dalam radius 10px
+      let closestWallId: string | null = null;
+      let minDistance = 10;
+
+      for (const wall of walls) {
+        const dist = distanceToLine(rawPos, wall.line);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestWallId = wall.id;
+        }
+      }
+      onSelectWall(closestWallId);
+      return;
+    }
+
+    if (activeTool === 'wall') {
+      isDrawing = true;
+      currentStart = rawPos;
+      currentEnd = rawPos;
+    }
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -56,7 +89,6 @@
   function handleMouseUp() {
     if (!isDrawing || !currentStart || !currentEnd) return;
     
-    // Jangan buat wall jika panjangnya 0 (klik tanpa drag)
     if (currentStart.x !== currentEnd.x || currentStart.y !== currentEnd.y) {
       onAddWall(currentStart, currentEnd);
     }
@@ -76,6 +108,7 @@
 <div 
   class="canvas-container" 
   bind:this={canvasContainer}
+  class:select-mode={activeTool === 'select'}
 >
   <div class="grid-layer" style="--grid-size: {gridSpacing}px;"></div>
   
@@ -88,6 +121,7 @@
         x2={wall.line.end.x} 
         y2={wall.line.end.y} 
         class="wall-line"
+        class:selected={selectedWallId === wall.id}
       />
     {/each}
 
@@ -107,6 +141,8 @@
 
   {#if activeTool === 'wall' && !isDrawing}
     <div class="tool-hint">Click and drag to draw a wall</div>
+  {:else if activeTool === 'select'}
+    <div class="tool-hint">Click on a wall to select it</div>
   {/if}
 </div>
 
@@ -117,6 +153,10 @@
     overflow: hidden;
     background: var(--bg);
     cursor: crosshair;
+  }
+
+  .canvas-container.select-mode {
+    cursor: default;
   }
 
   .grid-layer {
@@ -142,6 +182,13 @@
     stroke: var(--accent);
     stroke-width: 4;
     stroke-linecap: round;
+    transition: stroke 0.1s, stroke-width 0.1s;
+  }
+
+  .wall-line.selected {
+    stroke: #ff7a00; /* Neon Orange untuk seleksi */
+    stroke-width: 6;
+    filter: drop-shadow(0 0 4px rgba(255, 122, 0, 0.6));
   }
 
   .preview-line {

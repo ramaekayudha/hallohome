@@ -1,6 +1,6 @@
 # HalloHome — Restore Snapshot
 
-Generated: 2026-11-19T17:57:24.303Z
+Generated: 2026-11-19T18:11:29.538Z
 
 Total files: 51
 
@@ -125,7 +125,7 @@ resolver = "2"
 members = ["src/core", "src/tauri"]
 
 [workspace.package]
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Rama Eka Yudha"]
@@ -1044,7 +1044,7 @@ Public License instead of this License.  But first, please read
 ```json
 {
   "name": "hallohome",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -1085,7 +1085,7 @@ allowBuilds:
 ```markdown
 # HalloHome
 
-![Version](https://img.shields.io/badge/version-0.0.4-blue)
+![Version](https://img.shields.io/badge/version-0.0.5-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Tech](https://img.shields.io/badge/tech-Rust%20%2B%20Tauri%20v2%20%2B%20Svelte%205-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
@@ -1682,6 +1682,30 @@ impl Line {
         let dy = self.end.y - self.start.y;
         (dx * dx + dy * dy).sqrt()
     }
+
+    /// Calculates the shortest distance from a point to this line segment.
+    pub fn distance_to_point(&self, p: Point2) -> f32 {
+        let l2 = (self.end.x - self.start.x).powi(2) + (self.end.y - self.start.y).powi(2);
+        if l2 == 0.0 {
+            // Jika garis adalah titik
+            let dx = p.x - self.start.x;
+            let dy = p.y - self.start.y;
+            return (dx * dx + dy * dy).sqrt();
+        }
+
+        // Proyeksi titik p ke garis
+        let t = ((p.x - self.start.x) * (self.end.x - self.start.x)
+            + (p.y - self.start.y) * (self.end.y - self.start.y))
+            / l2;
+        let t = t.clamp(0.0, 1.0); // Menggunakan fungsi clamp standar Rust
+
+        let proj_x = self.start.x + t * (self.end.x - self.start.x);
+        let proj_y = self.start.y + t * (self.end.y - self.start.y);
+
+        let dx = p.x - proj_x;
+        let dy = p.y - proj_y;
+        (dx * dx + dy * dy).sqrt()
+    }
 }
 
 #[cfg(test)]
@@ -1704,6 +1728,20 @@ mod tests {
     fn line_length_ok() {
         let l = Line::new(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0));
         assert_eq!(l.length(), 5.0);
+    }
+
+    #[test]
+    fn line_distance_to_point_ok() {
+        // Garis horizontal dari (0,0) ke (10,0)
+        let l = Line::new(Point2::new(0.0, 0.0), Point2::new(10.0, 0.0));
+
+        // Titik di tengah atas (jarak harus 5)
+        let p1 = Point2::new(5.0, 5.0);
+        assert_eq!(l.distance_to_point(p1), 5.0);
+
+        // Titik di luar garis (jarak ke ujung terdekat)
+        let p2 = Point2::new(-3.0, 4.0); // Jarak ke (0,0) adalah 5
+        assert_eq!(l.distance_to_point(p2), 5.0);
     }
 }
 ```
@@ -6550,7 +6588,7 @@ fn main() {
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "HalloHome",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "identifier": "com.hallohome.app",
   "build": {
     "frontendDist": "../../src/ui/dist",
@@ -6640,7 +6678,7 @@ export default tseslint.config(
 ```json
 {
   "name": "@hallohome/ui",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -6851,10 +6889,16 @@ declare module '*.svelte' {
   let projectName = $state('Loading...');
   let gridSpacing = $state(20);
   let walls = $state<Wall[]>([]);
+  let selectedWallId = $state<string | null>(null);
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem('hallohome.theme', theme); } catch { /* ignore */ }
+    
+    // Reset seleksi jika pindah dari alat Select
+    if (activeTool !== 'select') {
+      selectedWallId = null;
+    }
   });
 
   function toggleTheme() {
@@ -6867,6 +6911,12 @@ declare module '*.svelte' {
       line: { start, end }
     };
     walls = [...walls, newWall];
+    selectedWallId = newWall.id; // Langsung pilih dinding yang baru dibuat
+  }
+
+  function deleteWall(id: string) {
+    walls = walls.filter(w => w.id !== id);
+    if (selectedWallId === id) selectedWallId = null;
   }
 
   onMount(async () => {
@@ -6896,8 +6946,21 @@ declare module '*.svelte' {
   />
   
   <div class="app-body">
-    <Sidebar {activeTool} {gridSpacing} {walls} />
-    <Canvas {activeTool} {gridSpacing} {walls} onAddWall={addWall} />
+    <Sidebar 
+      {activeTool} 
+      {gridSpacing} 
+      {walls} 
+      {selectedWallId} 
+      onDeleteWall={deleteWall} 
+    />
+    <Canvas 
+      {activeTool} 
+      {gridSpacing} 
+      {walls} 
+      {selectedWallId}
+      onAddWall={addWall} 
+      onSelectWall={(id) => selectedWallId = id}
+    />
   </div>
 
   <Footer />
@@ -6934,18 +6997,36 @@ declare module '*.svelte' {
     activeTool,
     gridSpacing,
     walls,
-    onAddWall
+    selectedWallId,
+    onAddWall,
+    onSelectWall
   }: {
     activeTool: string;
     gridSpacing: number;
     walls: Wall[];
+    selectedWallId: string | null;
     onAddWall: (start: Point2, end: Point2) => void;
+    onSelectWall: (id: string | null) => void;
   } = $props();
 
   let canvasContainer: HTMLElement;
   let isDrawing = $state(false);
   let currentStart = $state<Point2 | null>(null);
   let currentEnd = $state<Point2 | null>(null);
+
+  // Hitung jarak dari titik ke segmen garis (untuk seleksi)
+  function distanceToLine(p: Point2, line: Line): number {
+    const l2 = Math.pow(line.end.x - line.start.x, 2) + Math.pow(line.end.y - line.start.y, 2);
+    if (l2 === 0) return Math.hypot(p.x - line.start.x, p.y - line.start.y);
+    
+    let t = ((p.x - line.start.x) * (line.end.x - line.start.x) + (p.y - line.start.y) * (line.end.y - line.start.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    
+    const projX = line.start.x + t * (line.end.x - line.start.x);
+    const projY = line.start.y + t * (line.end.y - line.start.y);
+    
+    return Math.hypot(p.x - projX, p.y - projY);
+  }
 
   function snapToGrid(val: number) {
     return Math.round(val / gridSpacing) * gridSpacing;
@@ -6962,17 +7043,32 @@ declare module '*.svelte' {
     };
   }
 
-  // Menggunakan window event untuk mencegah peringatan A11y pada div
   function handleMouseDown(e: MouseEvent) {
-    if (activeTool !== 'wall') return;
-    
-    // Pastikan klik dimulai di dalam area canvas
     if (e.target instanceof Node && !canvasContainer.contains(e.target)) return;
 
-    const pos = getMousePos(e);
-    isDrawing = true;
-    currentStart = pos;
-    currentEnd = pos;
+    const rawPos = getMousePos(e);
+
+    if (activeTool === 'select') {
+      // Cari dinding terdekat dalam radius 10px
+      let closestWallId: string | null = null;
+      let minDistance = 10;
+
+      for (const wall of walls) {
+        const dist = distanceToLine(rawPos, wall.line);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestWallId = wall.id;
+        }
+      }
+      onSelectWall(closestWallId);
+      return;
+    }
+
+    if (activeTool === 'wall') {
+      isDrawing = true;
+      currentStart = rawPos;
+      currentEnd = rawPos;
+    }
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -6983,7 +7079,6 @@ declare module '*.svelte' {
   function handleMouseUp() {
     if (!isDrawing || !currentStart || !currentEnd) return;
     
-    // Jangan buat wall jika panjangnya 0 (klik tanpa drag)
     if (currentStart.x !== currentEnd.x || currentStart.y !== currentEnd.y) {
       onAddWall(currentStart, currentEnd);
     }
@@ -7003,6 +7098,7 @@ declare module '*.svelte' {
 <div 
   class="canvas-container" 
   bind:this={canvasContainer}
+  class:select-mode={activeTool === 'select'}
 >
   <div class="grid-layer" style="--grid-size: {gridSpacing}px;"></div>
   
@@ -7015,6 +7111,7 @@ declare module '*.svelte' {
         x2={wall.line.end.x} 
         y2={wall.line.end.y} 
         class="wall-line"
+        class:selected={selectedWallId === wall.id}
       />
     {/each}
 
@@ -7034,6 +7131,8 @@ declare module '*.svelte' {
 
   {#if activeTool === 'wall' && !isDrawing}
     <div class="tool-hint">Click and drag to draw a wall</div>
+  {:else if activeTool === 'select'}
+    <div class="tool-hint">Click on a wall to select it</div>
   {/if}
 </div>
 
@@ -7044,6 +7143,10 @@ declare module '*.svelte' {
     overflow: hidden;
     background: var(--bg);
     cursor: crosshair;
+  }
+
+  .canvas-container.select-mode {
+    cursor: default;
   }
 
   .grid-layer {
@@ -7069,6 +7172,13 @@ declare module '*.svelte' {
     stroke: var(--accent);
     stroke-width: 4;
     stroke-linecap: round;
+    transition: stroke 0.1s, stroke-width 0.1s;
+  }
+
+  .wall-line.selected {
+    stroke: #ff7a00; /* Neon Orange untuk seleksi */
+    stroke-width: 6;
+    filter: drop-shadow(0 0 4px rgba(255, 122, 0, 0.6));
   }
 
   .preview-line {
@@ -7369,12 +7479,38 @@ declare module '*.svelte' {
   interface Line { start: Point2; end: Point2; }
   interface Wall { id: string; line: Line; }
 
-  let { activeTool, gridSpacing, walls }: { activeTool: string; gridSpacing: number; walls: Wall[] } = $props();
+  let {
+    activeTool,
+    gridSpacing,
+    walls,
+    selectedWallId,
+    onDeleteWall
+  }: {
+    activeTool: string;
+    gridSpacing: number;
+    walls: Wall[];
+    selectedWallId: string | null;
+    onDeleteWall: (id: string) => void;
+  } = $props();
+
+  // Mencari objek dinding yang sedang dipilih
+  let selectedWall = $derived(walls.find(w => w.id === selectedWallId));
+
+  // Menghitung panjang dinding
+  let wallLength = $derived(
+    selectedWall 
+      ? Math.hypot(
+          selectedWall.line.end.x - selectedWall.line.start.x,
+          selectedWall.line.end.y - selectedWall.line.start.y
+        )
+      : 0
+  );
 </script>
 
 <aside class="sidebar">
   <div class="panel">
-    <h3 class="panel-title">Properties</h3>
+    <h3 class="panel-title">Inspector</h3>
+    
     <div class="property">
       <span class="label">Active Tool</span>
       <span class="value capitalize">{activeTool}</span>
@@ -7384,10 +7520,41 @@ declare module '*.svelte' {
       <span class="value">{gridSpacing}px</span>
     </div>
     <div class="property">
-      <span class="label">Walls</span>
+      <span class="label">Total Walls</span>
       <span class="value">{walls.length}</span>
     </div>
   </div>
+
+  {#if selectedWall}
+    <div class="panel highlight-panel">
+      <h3 class="panel-title text-orange">Wall Properties</h3>
+      
+      <div class="property">
+        <span class="label">Start X</span>
+        <span class="value">{selectedWall.line.start.x.toFixed(1)}</span>
+      </div>
+      <div class="property">
+        <span class="label">Start Y</span>
+        <span class="value">{selectedWall.line.start.y.toFixed(1)}</span>
+      </div>
+      <div class="property">
+        <span class="label">End X</span>
+        <span class="value">{selectedWall.line.end.x.toFixed(1)}</span>
+      </div>
+      <div class="property">
+        <span class="label">End Y</span>
+        <span class="value">{selectedWall.line.end.y.toFixed(1)}</span>
+      </div>
+      <div class="property">
+        <span class="label">Length</span>
+        <span class="value font-bold">{wallLength.toFixed(1)} px</span>
+      </div>
+
+      <button class="btn-danger" onclick={() => onDeleteWall(selectedWall.id)}>
+        Delete Wall
+      </button>
+    </div>
+  {/if}
 </aside>
 
 <style>
@@ -7398,10 +7565,16 @@ declare module '*.svelte' {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    overflow-y: auto;
   }
 
   .panel {
     padding: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .highlight-panel {
+    background: rgba(255, 122, 0, 0.05);
   }
 
   .panel-title {
@@ -7412,17 +7585,42 @@ declare module '*.svelte' {
     color: var(--text-muted);
   }
 
+  .text-orange {
+    color: #ff7a00;
+  }
+
   .property {
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px dashed var(--border);
     font-size: 0.9rem;
+  }
+  
+  .property:last-of-type {
+    border-bottom: none;
   }
 
   .label { color: var(--text-muted); }
   .value { font-weight: 500; }
   .capitalize { text-transform: capitalize; }
+  .font-bold { font-weight: 700; }
+
+  .btn-danger {
+    margin-top: 1rem;
+    width: 100%;
+    padding: 0.6rem;
+    background: #dc2626;
+    color: white;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+  }
+
+  .btn-danger:hover {
+    background: #b91c1c;
+  }
 </style>
 ```
 

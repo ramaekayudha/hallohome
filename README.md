@@ -1,6 +1,6 @@
 # HalloHome
 
-![Version](https://img.shields.io/badge/version-0.0.4-blue)
+![Version](https://img.shields.io/badge/version-0.0.5-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Tech](https://img.shields.io/badge/tech-Rust%20%2B%20Tauri%20v2%20%2B%20Svelte%205-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)

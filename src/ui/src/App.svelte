@@ -27,10 +27,16 @@
   let projectName = $state('Loading...');
   let gridSpacing = $state(20);
   let walls = $state<Wall[]>([]);
+  let selectedWallId = $state<string | null>(null);
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem('hallohome.theme', theme); } catch { /* ignore */ }
+    
+    // Reset seleksi jika pindah dari alat Select
+    if (activeTool !== 'select') {
+      selectedWallId = null;
+    }
   });
 
   function toggleTheme() {
@@ -43,6 +49,12 @@
       line: { start, end }
     };
     walls = [...walls, newWall];
+    selectedWallId = newWall.id; // Langsung pilih dinding yang baru dibuat
+  }
+
+  function deleteWall(id: string) {
+    walls = walls.filter(w => w.id !== id);
+    if (selectedWallId === id) selectedWallId = null;
   }
 
   onMount(async () => {
@@ -72,8 +84,21 @@
   />
   
   <div class="app-body">
-    <Sidebar {activeTool} {gridSpacing} {walls} />
-    <Canvas {activeTool} {gridSpacing} {walls} onAddWall={addWall} />
+    <Sidebar 
+      {activeTool} 
+      {gridSpacing} 
+      {walls} 
+      {selectedWallId} 
+      onDeleteWall={deleteWall} 
+    />
+    <Canvas 
+      {activeTool} 
+      {gridSpacing} 
+      {walls} 
+      {selectedWallId}
+      onAddWall={addWall} 
+      onSelectWall={(id) => selectedWallId = id}
+    />
   </div>
 
   <Footer />
