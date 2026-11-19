@@ -1,0 +1,24 @@
+{
+  "name": "hallohome",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "author": "Rama Eka Yudha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ramaekayudha/HalloHome.git"
+  },
+  "scripts": {
+    "verify": "node scripts/verify.mjs",
+    "bump": "node scripts/bump.mjs",
+    "restore": "node scripts/restore.mjs",
+    "logo": "node scripts/logo.mjs",
+    "build:ui": "pnpm --filter @hallohome/ui build",
+    "typecheck": "pnpm --filter @hallohome/ui typecheck",
+    "lint": "pnpm --filter @hallohome/ui lint"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}

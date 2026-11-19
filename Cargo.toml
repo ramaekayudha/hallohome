@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["src/core", "src/tauri"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "GPL-3.0-or-later"
+authors = ["Rama Eka Yudha"]
+repository = "https://github.com/ramaekayudha/HalloHome"
+rust-version = "1.78"
+
+[workspace.dependencies]
+hallohome-core = { path = "src/core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
