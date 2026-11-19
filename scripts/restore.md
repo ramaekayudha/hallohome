@@ -1,6 +1,6 @@
 # HalloHome — Restore Snapshot
 
-Generated: 2026-11-19T17:45:22.795Z
+Generated: 2026-11-19T17:57:24.303Z
 
 Total files: 51
 
@@ -125,7 +125,7 @@ resolver = "2"
 members = ["src/core", "src/tauri"]
 
 [workspace.package]
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Rama Eka Yudha"]
@@ -1044,7 +1044,7 @@ Public License instead of this License.  But first, please read
 ```json
 {
   "name": "hallohome",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -1085,7 +1085,7 @@ allowBuilds:
 ```markdown
 # HalloHome
 
-![Version](https://img.shields.io/badge/version-0.0.3-blue)
+![Version](https://img.shields.io/badge/version-0.0.4-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Tech](https://img.shields.io/badge/tech-Rust%20%2B%20Tauri%20v2%20%2B%20Svelte%205-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
@@ -1567,7 +1567,7 @@ mod tests {
 ```rust
 //! Floor plan model: walls, rooms, layers, snapping.
 
-use crate::geometry::Point2;
+use crate::geometry::{Line, Point2};
 use serde::{Deserialize, Serialize};
 
 /// Canonical module name.
@@ -1589,6 +1589,22 @@ impl Default for Grid {
     }
 }
 
+/// A wall element in the floor plan.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Wall {
+    pub id: String,
+    pub line: Line,
+}
+
+impl Wall {
+    pub fn new(id: impl Into<String>, start: Point2, end: Point2) -> Self {
+        Self {
+            id: id.into(),
+            line: Line::new(start, end),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1603,6 +1619,13 @@ mod tests {
         let g = Grid::default();
         assert_eq!(g.spacing, 20.0);
         assert_eq!(g.origin.x, 0.0);
+    }
+
+    #[test]
+    fn wall_constructs() {
+        let w = Wall::new("w1", Point2::new(0.0, 0.0), Point2::new(100.0, 0.0));
+        assert_eq!(w.id, "w1");
+        assert_eq!(w.line.length(), 100.0);
     }
 }
 ```
@@ -1641,6 +1664,26 @@ impl Point3 {
     }
 }
 
+/// A 2D line segment in scene units.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Line {
+    pub start: Point2,
+    pub end: Point2,
+}
+
+impl Line {
+    pub const fn new(start: Point2, end: Point2) -> Self {
+        Self { start, end }
+    }
+
+    /// Calculates the length of the line segment.
+    pub fn length(&self) -> f32 {
+        let dx = self.end.x - self.start.x;
+        let dy = self.end.y - self.start.y;
+        (dx * dx + dy * dy).sqrt()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1655,6 +1698,12 @@ mod tests {
     fn point3_constructs() {
         let p = Point3::new(1.0, 2.0, 3.0);
         assert_eq!((p.x, p.y, p.z), (1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn line_length_ok() {
+        let l = Line::new(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0));
+        assert_eq!(l.length(), 5.0);
     }
 }
 ```
@@ -1704,7 +1753,7 @@ mod tests {
 ```rust
 //! Project file: `.hallohome` schema, serialization, migration.
 
-use crate::floorplan::Grid;
+use crate::floorplan::{Grid, Wall};
 use serde::{Deserialize, Serialize};
 
 /// Canonical module name.
@@ -1721,6 +1770,7 @@ pub const SCHEMA_VERSION: u32 = 1;
 pub struct WorkspaceState {
     pub project_name: String,
     pub grid: Grid,
+    pub walls: Vec<Wall>,
 }
 
 impl Default for WorkspaceState {
@@ -1728,6 +1778,7 @@ impl Default for WorkspaceState {
         Self {
             project_name: "Untitled Project".to_string(),
             grid: Grid::default(),
+            walls: Vec::new(),
         }
     }
 }
@@ -1755,6 +1806,7 @@ mod tests {
     fn default_workspace_ok() {
         let ws = WorkspaceState::default();
         assert_eq!(ws.project_name, "Untitled Project");
+        assert!(ws.walls.is_empty());
     }
 }
 ```
@@ -6469,21 +6521,16 @@ path = "src/main.rs"
 
 ```rust
 //! HalloHome desktop app entry — Tauri v2 bridge.
-//!
-//! The bridge is a thin shell: it owns the window and forwards commands
-//! to `hallohome-core`. No business logic belongs here.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use hallohome_core::project::WorkspaceState;
 
-/// Returns the core engine version to the UI.
 #[tauri::command]
 fn core_version() -> &'static str {
     hallohome_core::version()
 }
 
-/// Initializes and returns the default workspace state.
 #[tauri::command]
 fn get_workspace_state() -> WorkspaceState {
     WorkspaceState::default()
@@ -6503,7 +6550,7 @@ fn main() {
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "HalloHome",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "identifier": "com.hallohome.app",
   "build": {
     "frontendDist": "../../src/ui/dist",
@@ -6593,7 +6640,7 @@ export default tseslint.config(
 ```json
 {
   "name": "@hallohome/ui",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -6785,16 +6832,11 @@ declare module '*.svelte' {
 
   type Theme = 'light' | 'dark';
 
-  // Definisi tipe yang mencerminkan struct WorkspaceState dari Rust
-  interface GridState {
-    spacing: number;
-    origin: { x: number; y: number };
-  }
-
-  interface WorkspaceState {
-    project_name: string;
-    grid: GridState;
-  }
+  interface Point2 { x: number; y: number; }
+  interface Line { start: Point2; end: Point2; }
+  interface Wall { id: string; line: Line; }
+  interface Grid { spacing: number; origin: Point2; }
+  interface WorkspaceState { project_name: string; grid: Grid; walls: Wall[]; }
 
   function initialTheme(): Theme {
     try {
@@ -6808,25 +6850,32 @@ declare module '*.svelte' {
   let activeTool = $state('select');
   let projectName = $state('Loading...');
   let gridSpacing = $state(20);
+  let walls = $state<Wall[]>([]);
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('hallohome.theme', theme);
-    } catch { /* ignore */ }
+    try { localStorage.setItem('hallohome.theme', theme); } catch { /* ignore */ }
   });
 
   function toggleTheme() {
     theme = theme === 'light' ? 'dark' : 'light';
   }
 
+  function addWall(start: Point2, end: Point2) {
+    const newWall: Wall = {
+      id: crypto.randomUUID(),
+      line: { start, end }
+    };
+    walls = [...walls, newWall];
+  }
+
   onMount(async () => {
     try {
       if (isTauri()) {
-        // Gunakan Generics untuk menghilangkan 'any'
         const state = await invoke<WorkspaceState>('get_workspace_state');
         projectName = state.project_name;
         gridSpacing = state.grid.spacing;
+        walls = state.walls;
       } else {
         projectName = 'Browser Preview';
       }
@@ -6847,8 +6896,8 @@ declare module '*.svelte' {
   />
   
   <div class="app-body">
-    <Sidebar {activeTool} {gridSpacing} />
-    <Canvas {activeTool} {gridSpacing} />
+    <Sidebar {activeTool} {gridSpacing} {walls} />
+    <Canvas {activeTool} {gridSpacing} {walls} onAddWall={addWall} />
   </div>
 
   <Footer />
@@ -6877,19 +6926,116 @@ declare module '*.svelte' {
 
 ```svelte
 <script lang="ts">
-  let { activeTool, gridSpacing }: { activeTool: string; gridSpacing: number } = $props();
+  interface Point2 { x: number; y: number; }
+  interface Line { start: Point2; end: Point2; }
+  interface Wall { id: string; line: Line; }
+
+  let {
+    activeTool,
+    gridSpacing,
+    walls,
+    onAddWall
+  }: {
+    activeTool: string;
+    gridSpacing: number;
+    walls: Wall[];
+    onAddWall: (start: Point2, end: Point2) => void;
+  } = $props();
+
+  let canvasContainer: HTMLElement;
+  let isDrawing = $state(false);
+  let currentStart = $state<Point2 | null>(null);
+  let currentEnd = $state<Point2 | null>(null);
+
+  function snapToGrid(val: number) {
+    return Math.round(val / gridSpacing) * gridSpacing;
+  }
+
+  function getMousePos(e: MouseEvent): Point2 {
+    if (!canvasContainer) return { x: 0, y: 0 };
+    const rect = canvasContainer.getBoundingClientRect();
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    return {
+      x: snapToGrid(rawX),
+      y: snapToGrid(rawY)
+    };
+  }
+
+  // Menggunakan window event untuk mencegah peringatan A11y pada div
+  function handleMouseDown(e: MouseEvent) {
+    if (activeTool !== 'wall') return;
+    
+    // Pastikan klik dimulai di dalam area canvas
+    if (e.target instanceof Node && !canvasContainer.contains(e.target)) return;
+
+    const pos = getMousePos(e);
+    isDrawing = true;
+    currentStart = pos;
+    currentEnd = pos;
+  }
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!isDrawing) return;
+    currentEnd = getMousePos(e);
+  }
+
+  function handleMouseUp() {
+    if (!isDrawing || !currentStart || !currentEnd) return;
+    
+    // Jangan buat wall jika panjangnya 0 (klik tanpa drag)
+    if (currentStart.x !== currentEnd.x || currentStart.y !== currentEnd.y) {
+      onAddWall(currentStart, currentEnd);
+    }
+
+    isDrawing = false;
+    currentStart = null;
+    currentEnd = null;
+  }
 </script>
 
-<main class="canvas-container">
-  <div 
-    class="grid-layer" 
-    style="--grid-size: {gridSpacing}px;"
-  ></div>
+<svelte:window 
+  onmousedown={handleMouseDown}
+  onmousemove={handleMouseMove}
+  onmouseup={handleMouseUp}
+/>
+
+<div 
+  class="canvas-container" 
+  bind:this={canvasContainer}
+>
+  <div class="grid-layer" style="--grid-size: {gridSpacing}px;"></div>
   
-  <div class="canvas-content">
-    <p class="hint">Workspace Ready. Tool: <strong>{activeTool}</strong></p>
-  </div>
-</main>
+  <svg class="drawing-layer">
+    <!-- Render Walls -->
+    {#each walls as wall (wall.id)}
+      <line 
+        x1={wall.line.start.x} 
+        y1={wall.line.start.y} 
+        x2={wall.line.end.x} 
+        y2={wall.line.end.y} 
+        class="wall-line"
+      />
+    {/each}
+
+    <!-- Preview Line -->
+    {#if isDrawing && currentStart && currentEnd}
+      <line 
+        x1={currentStart.x} 
+        y1={currentStart.y} 
+        x2={currentEnd.x} 
+        y2={currentEnd.y} 
+        class="preview-line"
+      />
+      <circle cx={currentStart.x} cy={currentStart.y} r="3" class="anchor-point" />
+      <circle cx={currentEnd.x} cy={currentEnd.y} r="3" class="anchor-point" />
+    {/if}
+  </svg>
+
+  {#if activeTool === 'wall' && !isDrawing}
+    <div class="tool-hint">Click and drag to draw a wall</div>
+  {/if}
+</div>
 
 <style>
   .canvas-container {
@@ -6897,35 +7043,58 @@ declare module '*.svelte' {
     position: relative;
     overflow: hidden;
     background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    cursor: crosshair;
   }
 
   .grid-layer {
     position: absolute;
     inset: 0;
-    background-image: 
-      radial-gradient(var(--border) 1px, transparent 1px);
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
     background-size: var(--grid-size) var(--grid-size);
-    background-position: center center;
+    background-position: 0 0;
     opacity: 0.6;
     pointer-events: none;
   }
 
-  .canvas-content {
-    position: relative;
-    z-index: 1;
-    background: var(--bg-elevated);
-    padding: 1rem 2rem;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
+  .drawing-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
-  .hint {
-    margin: 0;
+  /* SVG Styles */
+  .wall-line {
+    stroke: var(--accent);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .preview-line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
+    opacity: 0.7;
+  }
+
+  .anchor-point {
+    fill: var(--accent);
+  }
+
+  .tool-hint {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
     color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    pointer-events: none;
   }
 </style>
 ```
@@ -7196,7 +7365,11 @@ declare module '*.svelte' {
 
 ```svelte
 <script lang="ts">
-  let { activeTool, gridSpacing }: { activeTool: string; gridSpacing: number } = $props();
+  interface Point2 { x: number; y: number; }
+  interface Line { start: Point2; end: Point2; }
+  interface Wall { id: string; line: Line; }
+
+  let { activeTool, gridSpacing, walls }: { activeTool: string; gridSpacing: number; walls: Wall[] } = $props();
 </script>
 
 <aside class="sidebar">
@@ -7209,6 +7382,10 @@ declare module '*.svelte' {
     <div class="property">
       <span class="label">Grid Size</span>
       <span class="value">{gridSpacing}px</span>
+    </div>
+    <div class="property">
+      <span class="label">Walls</span>
+      <span class="value">{walls.length}</span>
     </div>
   </div>
 </aside>

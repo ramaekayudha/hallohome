@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { activeTool, gridSpacing }: { activeTool: string; gridSpacing: number } = $props();
+  interface Point2 { x: number; y: number; }
+  interface Line { start: Point2; end: Point2; }
+  interface Wall { id: string; line: Line; }
+
+  let { activeTool, gridSpacing, walls }: { activeTool: string; gridSpacing: number; walls: Wall[] } = $props();
 </script>
 
 <aside class="sidebar">
@@ -12,6 +16,10 @@
     <div class="property">
       <span class="label">Grid Size</span>
       <span class="value">{gridSpacing}px</span>
+    </div>
+    <div class="property">
+      <span class="label">Walls</span>
+      <span class="value">{walls.length}</span>
     </div>
   </div>
 </aside>

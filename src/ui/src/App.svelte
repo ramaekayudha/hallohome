@@ -8,16 +8,11 @@
 
   type Theme = 'light' | 'dark';
 
-  // Definisi tipe yang mencerminkan struct WorkspaceState dari Rust
-  interface GridState {
-    spacing: number;
-    origin: { x: number; y: number };
-  }
-
-  interface WorkspaceState {
-    project_name: string;
-    grid: GridState;
-  }
+  interface Point2 { x: number; y: number; }
+  interface Line { start: Point2; end: Point2; }
+  interface Wall { id: string; line: Line; }
+  interface Grid { spacing: number; origin: Point2; }
+  interface WorkspaceState { project_name: string; grid: Grid; walls: Wall[]; }
 
   function initialTheme(): Theme {
     try {
@@ -31,25 +26,32 @@
   let activeTool = $state('select');
   let projectName = $state('Loading...');
   let gridSpacing = $state(20);
+  let walls = $state<Wall[]>([]);
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('hallohome.theme', theme);
-    } catch { /* ignore */ }
+    try { localStorage.setItem('hallohome.theme', theme); } catch { /* ignore */ }
   });
 
   function toggleTheme() {
     theme = theme === 'light' ? 'dark' : 'light';
   }
 
+  function addWall(start: Point2, end: Point2) {
+    const newWall: Wall = {
+      id: crypto.randomUUID(),
+      line: { start, end }
+    };
+    walls = [...walls, newWall];
+  }
+
   onMount(async () => {
     try {
       if (isTauri()) {
-        // Gunakan Generics untuk menghilangkan 'any'
         const state = await invoke<WorkspaceState>('get_workspace_state');
         projectName = state.project_name;
         gridSpacing = state.grid.spacing;
+        walls = state.walls;
       } else {
         projectName = 'Browser Preview';
       }
@@ -70,8 +72,8 @@
   />
   
   <div class="app-body">
-    <Sidebar {activeTool} {gridSpacing} />
-    <Canvas {activeTool} {gridSpacing} />
+    <Sidebar {activeTool} {gridSpacing} {walls} />
+    <Canvas {activeTool} {gridSpacing} {walls} onAddWall={addWall} />
   </div>
 
   <Footer />

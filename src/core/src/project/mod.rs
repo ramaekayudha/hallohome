@@ -1,6 +1,6 @@
 //! Project file: `.hallohome` schema, serialization, migration.
 
-use crate::floorplan::Grid;
+use crate::floorplan::{Grid, Wall};
 use serde::{Deserialize, Serialize};
 
 /// Canonical module name.
@@ -17,6 +17,7 @@ pub const SCHEMA_VERSION: u32 = 1;
 pub struct WorkspaceState {
     pub project_name: String,
     pub grid: Grid,
+    pub walls: Vec<Wall>,
 }
 
 impl Default for WorkspaceState {
@@ -24,6 +25,7 @@ impl Default for WorkspaceState {
         Self {
             project_name: "Untitled Project".to_string(),
             grid: Grid::default(),
+            walls: Vec::new(),
         }
     }
 }
@@ -51,5 +53,6 @@ mod tests {
     fn default_workspace_ok() {
         let ws = WorkspaceState::default();
         assert_eq!(ws.project_name, "Untitled Project");
+        assert!(ws.walls.is_empty());
     }
 }
